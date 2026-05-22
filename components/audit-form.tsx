@@ -26,6 +26,8 @@ const INITIAL_TOOL_STATE = (tool: string): UserToolInput => ({
 export default function AuditForm() {
   const [activeStack, setActiveStack] = useState<UserToolInput[]>([]);
   const [results, setResults] = useState<AuditRecommendation[]>([]);
+  const [aiSummary, setAiSummary] = useState<string>("");
+  const [isLoadingSummary, setIsLoadingSummary] = useState<boolean>(false);
   const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
@@ -71,9 +73,35 @@ export default function AuditForm() {
     updateStackAndCache(updated);
   };
 
-  const executeStackAudit = () => {
+  const executeStackAudit = async () => {
+    // 1. Run the local math engine instantly
     const engineOutputs = runAudit(activeStack);
     setResults(engineOutputs);
+    
+    // Calculate totals to forward to backend API proxy
+    const totalMonthlySavings = engineOutputs.reduce((sum, item) => sum + item.monthlySavings, 0);
+    const totalAnnualSavings = engineOutputs.reduce((sum, item) => sum + item.annualSavings, 0);
+
+    // 2. Fetch the qualitative AI Summary narrative from our backend proxy route
+    setIsLoadingSummary(true);
+    setAiSummary("");
+    try {
+      const response = await fetch("/api/summary", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          totalMonthlySavings,
+          totalAnnualSavings,
+          recommendations: engineOutputs
+        })
+      });
+      const data = await response.json();
+      setAiSummary(data.summary);
+    } catch (err) {
+      console.error("Failed to load summary narrative:", err);
+    } finally {
+      setIsLoadingSummary(false);
+    }
   };
 
   if (!isHydrated) return <div className="mt-20 text-center text-zinc-500 animate-pulse">Loading Stack Parameters...</div>;
@@ -219,6 +247,25 @@ export default function AuditForm() {
                 <strong>Honest Assessment Asset:</strong> Your platform overhead footprint metrics line up effectively against active developer allocations.
               </div>
             ) : null}
+          </div>
+
+          {/* AI Personalized Executive Summary Section */}
+          <div className="rounded-3xl border border-zinc-800 bg-zinc-950 p-6 shadow-xl">
+            <h4 className="text-xs font-bold uppercase tracking-widest text-purple-400 flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-purple-400 animate-pulse" />
+              AI Executive Analysis
+            </h4>
+            {isLoadingSummary ? (
+              <div className="mt-4 space-y-2 animate-pulse">
+                <div className="h-4 bg-zinc-800 rounded w-full" />
+                <div className="h-4 bg-zinc-800 rounded w-5/6" />
+                <div className="h-4 bg-zinc-800 rounded w-2/3" />
+              </div>
+            ) : (
+              <p className="mt-4 text-sm text-zinc-300 leading-relaxed italic">
+                "{aiSummary || "No narrative evaluation generated for this footprint profile."}"
+              </p>
+            )}
           </div>
 
           <div className="space-y-4">
