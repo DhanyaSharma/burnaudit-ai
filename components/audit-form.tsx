@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { runAudit } from "@/lib/audit-engine";
 import { UserToolInput, AuditRecommendation } from "@/types/audit";
+import { useRouter } from "next/navigation";
 
 const AVAILABLE_TOOLS = ["ChatGPT", "Claude", "Cursor", "GitHub Copilot", "Gemini", "Windsurf"];
 
@@ -24,6 +25,7 @@ const INITIAL_TOOL_STATE = (tool: string): UserToolInput => ({
 });
 
 export default function AuditForm() {
+  const router = useRouter();
   const [activeStack, setActiveStack] = useState<UserToolInput[]>([]);
   const [results, setResults] = useState<AuditRecommendation[]>([]);
   const [aiSummary, setAiSummary] = useState<string>("");
@@ -85,6 +87,9 @@ export default function AuditForm() {
     // 2. Fetch the qualitative AI Summary narrative from our backend proxy route
     setIsLoadingSummary(true);
     setAiSummary("");
+    
+    let generatedSummary = "No AI summary generated."; // Instantiating safe variable scope
+    
     try {
       const response = await fetch("/api/summary", {
         method: "POST",
@@ -96,11 +101,43 @@ export default function AuditForm() {
         })
       });
       const data = await response.json();
-      setAiSummary(data.summary);
+      if (data.summary) {
+        generatedSummary = data.summary;
+        setAiSummary(generatedSummary);
+      }
     } catch (err) {
       console.error("Failed to load summary narrative:", err);
     } finally {
       setIsLoadingSummary(false);
+    }
+
+    // 3. STEP 3 — Save Audit payload securely to Supabase Database Layer
+    try {
+      const saveResponse = await fetch("/api/save-audit", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          stack: activeStack,
+          recommendations: engineOutputs,
+          aiSummary: generatedSummary, // Using the verified variable directly
+          totalMonthlySavings,
+          totalAnnualSavings,
+        }),
+      });
+
+      const savedAudit = await saveResponse.json();
+      
+      if (savedAudit.success && savedAudit.auditId) {
+        console.log("Saved Audit ID successfully captured:", savedAudit.auditId);
+        router.push(`/audit/${savedAudit.auditId}`);
+        
+      } else {
+        console.error("Database persistence warning:", savedAudit.error);
+      }
+    } catch (saveErr) {
+      console.error("Failed to post audit payload to backend storage:", saveErr);
     }
   };
 

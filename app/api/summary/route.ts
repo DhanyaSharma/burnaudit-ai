@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
+import { AuditRecommendation } from "@/types/audit";
 
 // Initialize the Google GenAI SDK
 const ai = new GoogleGenAI({
@@ -18,7 +19,7 @@ export async function POST(request: Request) {
     }
 
     const formattedRecommendations = recommendations
-      .map((r: any) => `- ${r.toolName}: Current Cost $${r.currentMonthlyCost}/mo -> Recommended Plan: ${r.recommendedPlan} (Savings: $${r.monthlySavings}/mo). Reasoning: ${r.reasoning}`)
+      .map((r: AuditRecommendation) => `- ${r.toolName}: Current Cost $${r.currentMonthlyCost}/mo -> Recommended Plan: ${r.recommendedPlan} (Savings: $${r.monthlySavings}/mo). Reasoning: ${r.reasoning}`)
       .join("\n");
 
     const prompt = `You are an elite, cynical B2B SaaS CFO and efficiency expert. Analyze this company's AI tool stack spend audit metrics:
