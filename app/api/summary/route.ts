@@ -37,8 +37,14 @@ Strict Guidelines:
 
     // Call Gemini 2.5 Flash using the modern 2026 SDK structure
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompt,
+    model: "gemini-2.5-flash",
+
+    contents: prompt,
+
+    config: {
+        temperature: 0.6,
+        maxOutputTokens: 220,
+    },
     });
 
     const summaryText = response.text || "";

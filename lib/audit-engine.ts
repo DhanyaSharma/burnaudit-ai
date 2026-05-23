@@ -9,13 +9,12 @@ export function runAudit(
 ): AuditRecommendation[] {
   const recommendations: AuditRecommendation[] = [];
 
-  // Track tool co-existence across the entire stack for Redundancy checks
+  // Track tool co-existence for redundancy checks
   const hasCursor = tools.some(t => t.toolName === "Cursor" && !["Free", "Hobby"].includes(t.currentPlan));
   const hasWindsurf = tools.some(t => t.toolName === "Windsurf" && !["Free"].includes(t.currentPlan));
 
   tools.forEach((tool) => {
     const pricing = AI_TOOL_PRICING[tool.toolName];
-
     if (!pricing) return;
 
     let optimizedCost = tool.monthlySpend;
@@ -23,8 +22,30 @@ export function runAudit(
     let reasoning = "Your current setup appears efficient.";
     let severity: "low" | "medium" | "high" = "low";
 
+    const currentPlanPricing = pricing[tool.currentPlan];
+
     // -------------------------------------------------------------------------
-    // Rule 1: Team plans for tiny teams (Seats <= 2)
+    // Rule 0: Overspend detection — user is paying more than plan × seats
+    // e.g. Claude Pro = $20/seat. 15 seats = $300/mo. If they enter $2497, flag it.
+    // -------------------------------------------------------------------------
+    if (
+      currentPlanPricing &&
+      typeof currentPlanPricing.monthlyCostPerSeat === "number" &&
+      currentPlanPricing.monthlyCostPerSeat > 0
+    ) {
+      const expectedCost = currentPlanPricing.monthlyCostPerSeat * tool.seats;
+      const overspendThreshold = expectedCost * 1.2; // Allow 20% buffer for taxes/fees
+
+      if (tool.monthlySpend > overspendThreshold) {
+        optimizedCost = expectedCost;
+        recommendedPlan = `${tool.currentPlan} (correct seat count)`;
+        reasoning = `At ${tool.seats} seat${tool.seats > 1 ? "s" : ""}, ${tool.toolName} ${tool.currentPlan} should cost $${expectedCost.toLocaleString()}/mo ($${currentPlanPricing.monthlyCostPerSeat}/seat). Your reported spend of $${tool.monthlySpend.toLocaleString()}/mo suggests billing errors, unused seats, or untracked add-ons worth auditing immediately.`;
+        severity = "high";
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // Rule 1: Team plans for tiny teams (seats <= 2)
     // -------------------------------------------------------------------------
     if (
       ["Team", "Business", "Enterprise", "Teams"].includes(tool.currentPlan) &&
@@ -35,51 +56,69 @@ export function runAudit(
         pricing["Pro"] ||
         pricing["Individual"];
 
-      // Defensive Check: Ensure cheaperPlan exists AND its price is a valid number
       if (cheaperPlan && typeof cheaperPlan.monthlyCostPerSeat === "number") {
-        optimizedCost = cheaperPlan.monthlyCostPerSeat * tool.seats;
-        recommendedPlan = cheaperPlan.name;
-        reasoning = "Small teams (2 or fewer seats) typically do not benefit from administrative, compliance, or user provisioning overhead. Downgrading to independent individual accounts provides identical AI capabilities[cite: 59].";
-        severity = "high";
+        const teamDowngradeCost = cheaperPlan.monthlyCostPerSeat * tool.seats;
+        if (teamDowngradeCost < optimizedCost) {
+          optimizedCost = teamDowngradeCost;
+          recommendedPlan = cheaperPlan.name;
+          reasoning = `Small teams of ${tool.seats} seat${tool.seats > 1 ? "s" : ""} don't benefit from the SSO, audit logs, or provisioning overhead in ${tool.currentPlan} tier. Individual ${cheaperPlan.name} accounts at $${cheaperPlan.monthlyCostPerSeat}/seat provide identical AI capabilities at $${teamDowngradeCost}/mo vs your current $${tool.monthlySpend}/mo.`;
+          severity = "high";
+        }
       }
     }
 
     // -------------------------------------------------------------------------
-    // Rule 2: Monthly vs annual billing
+    // Rule 2: Monthly vs annual billing savings
     // -------------------------------------------------------------------------
-    const currentPlanPricing = pricing[tool.currentPlan];
-
-    if (
-      currentPlanPricing?.annualCostPerSeat &&
-      !tool.annualBilling
-    ) {
+    if (currentPlanPricing?.annualCostPerSeat && !tool.annualBilling) {
       const annualOptimized = currentPlanPricing.annualCostPerSeat * tool.seats;
-
       if (annualOptimized < optimizedCost) {
         optimizedCost = annualOptimized;
-        
-        // Clean up text concatenation so it doesn't leave trailing placeholder defaults
+        const savingsPct = Math.round(
+          ((currentPlanPricing.monthlyCostPerSeat! - currentPlanPricing.annualCostPerSeat) /
+            currentPlanPricing.monthlyCostPerSeat!) * 100
+        );
         if (reasoning === "Your current setup appears efficient.") {
-          reasoning = "Commit to annual billing to unlock standard volume platform discounts[cite: 60].";
+          reasoning = `Switching to annual billing saves ${savingsPct}% ($${(currentPlanPricing.monthlyCostPerSeat! - currentPlanPricing.annualCostPerSeat).toFixed(0)}/seat/mo) with no feature changes — standard vendor discount for upfront commitment.`;
         } else {
-          reasoning += " Switching to annual billing would further compress costs[cite: 60].";
+          reasoning += ` Annual billing would save an additional ${savingsPct}% per seat.`;
         }
-        
         if (severity !== "high") severity = "medium";
       }
     }
 
     // -------------------------------------------------------------------------
-    // Rule 3: Redundant Code-Autocomplete Stacking (Cursor / Windsurf vs. Copilot)
+    // Rule 3: Redundant code-autocomplete tools (Cursor/Windsurf + Copilot)
     // -------------------------------------------------------------------------
     if (tool.toolName === "GitHub Copilot" && (hasCursor || hasWindsurf)) {
       optimizedCost = 0;
-      recommendedPlan = "None (Cancel)";
-      reasoning = `Your engineering team is already utilizing an AI-native IDE (${hasCursor ? "Cursor" : "Windsurf"}) featuring high-performance inline auto-completions. Maintaining distinct standalone Copilot licenses represents 100% duplicate spending[cite: 61].`;
+      recommendedPlan = "Cancel";
+      reasoning = `Your team already pays for ${hasCursor ? "Cursor" : "Windsurf"}, an AI-native IDE with built-in inline completions. GitHub Copilot adds zero net capability — this is 100% duplicate spend. Cancel Copilot and redirect the budget.`;
       severity = "high";
     }
 
-    const monthlySavings = tool.monthlySpend - optimizedCost;
+    // -------------------------------------------------------------------------
+    // Rule 4: Seat count sanity — paying for more seats than team size warrants
+    // -------------------------------------------------------------------------
+    if (
+      currentPlanPricing &&
+      typeof currentPlanPricing.monthlyCostPerSeat === "number" &&
+      tool.seats > 10 &&
+      !currentPlanPricing.isTeamTier
+    ) {
+      const enterprisePlan = pricing["Enterprise"] || pricing["Business"];
+      if (enterprisePlan && typeof enterprisePlan.monthlyCostPerSeat === "number") {
+        const enterpriseCost = enterprisePlan.monthlyCostPerSeat * tool.seats;
+        if (enterpriseCost < optimizedCost) {
+          optimizedCost = enterpriseCost;
+          recommendedPlan = enterprisePlan.name;
+          reasoning = `With ${tool.seats} seats on a non-team plan, you're missing volume pricing and central billing. Upgrading to ${enterprisePlan.name} at $${enterprisePlan.monthlyCostPerSeat}/seat reduces per-seat cost and adds admin controls your team size requires.`;
+          if (severity !== "high") severity = "medium";
+        }
+      }
+    }
+
+    const monthlySavings = Math.max(0, tool.monthlySpend - optimizedCost);
 
     recommendations.push({
       toolName: tool.toolName,
@@ -87,8 +126,8 @@ export function runAudit(
       recommendedPlan,
       currentMonthlyCost: tool.monthlySpend,
       optimizedMonthlyCost: optimizedCost,
-      monthlySavings: monthlySavings > 0 ? monthlySavings : 0,
-      annualSavings: (monthlySavings > 0 ? monthlySavings : 0) * 12,
+      monthlySavings,
+      annualSavings: monthlySavings * 12,
       reasoning,
       severity,
     });
