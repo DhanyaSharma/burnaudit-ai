@@ -3,60 +3,102 @@ import AuditForm from "@/components/audit-form";
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-black text-white selection:bg-zinc-800">
-      
-      {/* Premium Dark Navigation Header */}
-      <nav className="mx-auto flex max-w-7xl items-center justify-between px-6 py-6 border-b border-zinc-900">
-        <div className="text-xl font-black tracking-tighter">
-          BURNAUDIT<span className="text-zinc-500">-AI</span>
+    <div className="min-h-screen bg-[#080808] text-white">
+
+      {/* Nav */}
+      <nav className="fixed top-0 left-0 right-0 z-50 border-b border-white/[0.06] bg-[#080808]/80 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+          <div className="flex items-center gap-2">
+            <div className="h-6 w-6 rounded-md bg-white flex items-center justify-center">
+              <div className="h-3 w-3 rounded-sm bg-black" />
+            </div>
+            <span className="text-sm font-bold tracking-tight text-white">
+              BURNAUDIT<span className="text-white/30">.AI</span>
+            </span>
+          </div>
+          <div className="flex items-center gap-3">
+            <Link
+              href="#audit-section"
+              className="text-sm text-white/50 hover:text-white transition-colors"
+            >
+              How it works
+            </Link>
+            <Link
+              href="#audit-section"
+              className="rounded-lg bg-white px-4 py-2 text-xs font-bold text-black hover:bg-white/90 transition-all"
+            >
+              Run Free Audit
+            </Link>
+          </div>
         </div>
-        {/* Top Navbar Button pointing to our anchor section */}
-        <Link 
-          href="#audit-section" 
-          className="rounded-xl bg-white text-zinc-950 px-5 py-2 text-sm font-semibold hover:opacity-90 transition-all shadow-md"
-        >
-          Run Audit
-        </Link>
       </nav>
 
-      {/* Main Hero Marketing Panel Container */}
-      <header className="mx-auto max-w-4xl px-6 pt-20 pb-16 text-center">
-        <span className="inline-flex items-center rounded-full bg-zinc-900 border border-zinc-800 px-4 py-1.5 text-xs font-medium text-zinc-400">
-          Save thousands on AI subscriptions
-        </span>
-        <h1 className="mt-8 text-5xl font-black tracking-tight text-white sm:text-7xl leading-none">
-          Stop Overpaying <br />
-          <span className="text-zinc-400">for AI Tools</span>
-        </h1>
-        <p className="mt-6 text-base text-zinc-400 max-w-xl mx-auto leading-relaxed">
-          Instantly audit your AI stack and uncover hidden savings across ChatGPT, Claude, Cursor, GitHub Copilot, Gemini, and more.
-        </p>
+      {/* Hero */}
+      <section className="relative pt-32 pb-20 px-6 overflow-hidden">
+        {/* Background grid */}
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            backgroundImage: `linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)`,
+            backgroundSize: "64px 64px",
+          }}
+        />
+        {/* Radial glow */}
+        <div className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-white/[0.03] rounded-full blur-3xl" />
 
-        <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
-          {/* Main Action Button pointing to our anchor section */}
-          <Link 
-            href="#audit-section" 
-            className="rounded-xl bg-white text-zinc-950 px-6 py-3 font-bold text-sm hover:opacity-90 transition-all shadow-xl"
-          >
-            Run Free Audit
-          </Link>
-          <Link 
-            href="#audit-section" 
-            className="rounded-xl border border-zinc-800 bg-zinc-950/40 text-zinc-300 px-6 py-3 font-semibold text-sm hover:bg-zinc-900/50 transition-all"
-          >
-            View Sample Report
-          </Link>
+        <div className="relative mx-auto max-w-4xl text-center">
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-1.5 mb-8">
+            <div className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
+            <span className="text-xs font-medium text-white/60 tracking-wide">Free AI spend analysis — no account needed</span>
+          </div>
+
+          <h1 className="text-6xl sm:text-7xl font-black tracking-tighter text-white leading-[0.95] mb-6">
+            Stop burning money<br />
+            <span className="text-white/25">on AI tools.</span>
+          </h1>
+
+          <p className="text-base text-white/40 max-w-lg mx-auto leading-relaxed mb-10">
+            Audit your AI stack in 60 seconds. Find duplicate subscriptions, wrong plans, and hidden savings across every major AI tool.
+          </p>
+
+          <div className="flex flex-wrap items-center justify-center gap-3 mb-16">
+            <Link
+              href="#audit-section"
+              className="rounded-xl bg-white text-black px-7 py-3.5 text-sm font-bold hover:bg-white/90 transition-all shadow-[0_0_40px_rgba(255,255,255,0.1)]"
+            >
+              Run Free Audit →
+            </Link>
+            <Link
+              href="#audit-section"
+              className="rounded-xl border border-white/10 bg-white/[0.04] text-white/70 px-7 py-3.5 text-sm font-medium hover:bg-white/[0.08] hover:text-white transition-all"
+            >
+              View Sample Report
+            </Link>
+          </div>
+
+          {/* Social proof strip */}
+          <div className="flex flex-wrap items-center justify-center gap-8">
+            {[
+              ["$49k+", "recovered last month"],
+              ["8 tools", "supported"],
+              ["60 sec", "average audit time"],
+            ].map(([stat, label]) => (
+              <div key={stat} className="text-center">
+                <div className="text-xl font-black text-white">{stat}</div>
+                <div className="text-xs text-white/30 mt-0.5">{label}</div>
+              </div>
+            ))}
+          </div>
         </div>
+      </section>
 
-        <div className="mt-12 flex flex-wrap items-center justify-center gap-8 text-xs font-medium text-zinc-600">
-          <div>✓ No login required</div>
-          <div>✓ Instant savings report</div>
-          <div>✓ Shareable audit URL</div>
-        </div>
-      </header>
+      {/* Divider */}
+      <div className="mx-auto max-w-6xl px-6">
+        <div className="h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+      </div>
 
-      {/* --- RENDER AUDIT WORKSPACE WITH MATCHING ANCHOR ID --- */}
-      <main className="mx-auto max-w-5xl px-6 pb-24">
+      {/* Audit Form */}
+      <main className="mx-auto max-w-4xl px-6 py-16 pb-32">
         <section id="audit-section" className="scroll-mt-24">
           <AuditForm />
         </section>
