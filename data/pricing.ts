@@ -3,6 +3,7 @@ export interface PlanDetails {
   monthlyCostPerSeat: number | null;
   annualCostPerSeat?: number | null;
   isTeamTier: boolean;
+  isApiTier?: boolean;
   supportsSSO?: boolean;
   supportsCentralBilling?: boolean;
   notes?: string;
@@ -24,7 +25,6 @@ export const AI_TOOL_PRICING: MarketPricingData = {
       isTeamTier: false,
       notes: "Free personal tier",
     },
-
     Pro: {
       name: "Pro",
       monthlyCostPerSeat: 20,
@@ -32,21 +32,6 @@ export const AI_TOOL_PRICING: MarketPricingData = {
       isTeamTier: false,
       notes: "Best for solo developers",
     },
-
-    "Pro+": {
-      name: "Pro+",
-      monthlyCostPerSeat: 60,
-      isTeamTier: false,
-      notes: "Higher credit allocations",
-    },
-
-    Ultra: {
-      name: "Ultra",
-      monthlyCostPerSeat: 200,
-      isTeamTier: false,
-      notes: "Heavy AI generation workloads",
-    },
-
     Business: {
       name: "Business",
       monthlyCostPerSeat: 40,
@@ -55,7 +40,6 @@ export const AI_TOOL_PRICING: MarketPricingData = {
       supportsCentralBilling: true,
       notes: "Collaboration and admin controls",
     },
-
     Enterprise: {
       name: "Enterprise",
       monthlyCostPerSeat: 100,
@@ -72,27 +56,12 @@ export const AI_TOOL_PRICING: MarketPricingData = {
       monthlyCostPerSeat: 10,
       isTeamTier: false,
     },
-
-    Pro: {
-      name: "Pro",
-      monthlyCostPerSeat: 10,
-      isTeamTier: false,
-      notes: "Token allocation pricing changes in 2026",
-    },
-
-    "Pro+": {
-      name: "Pro+",
-      monthlyCostPerSeat: 39,
-      isTeamTier: false,
-    },
-
     Business: {
       name: "Business",
       monthlyCostPerSeat: 19,
       isTeamTier: true,
       supportsCentralBilling: true,
     },
-
     Enterprise: {
       name: "Enterprise",
       monthlyCostPerSeat: 39,
@@ -108,53 +77,18 @@ export const AI_TOOL_PRICING: MarketPricingData = {
       monthlyCostPerSeat: 0,
       isTeamTier: false,
     },
-
     Pro: {
       name: "Pro",
       monthlyCostPerSeat: 20,
       isTeamTier: false,
       notes: "Includes Claude Code CLI access",
     },
-
     Max: {
       name: "Max",
       monthlyCostPerSeat: 100,
       isTeamTier: false,
       notes: "High agentic runtime usage",
     },
-
-    Team: {
-      name: "Team Standard",
-      monthlyCostPerSeat: 30,
-      annualCostPerSeat: 25,
-      isTeamTier: true,
-      supportsCentralBilling: true,
-    },
-
-    Enterprise: {
-      name: "Enterprise Premium",
-      monthlyCostPerSeat: 150,
-      isTeamTier: true,
-      supportsCentralBilling: true,
-      supportsSSO: true,
-      notes: "Expanded context windows and governance",
-    },
-  },
-
-  ChatGPT: {
-    Go: {
-      name: "Go",
-      monthlyCostPerSeat: 8,
-      isTeamTier: false,
-      notes: "Budget access tier",
-    },
-
-    Plus: {
-      name: "Plus",
-      monthlyCostPerSeat: 20,
-      isTeamTier: false,
-    },
-
     Team: {
       name: "Team",
       monthlyCostPerSeat: 30,
@@ -162,7 +96,36 @@ export const AI_TOOL_PRICING: MarketPricingData = {
       isTeamTier: true,
       supportsCentralBilling: true,
     },
+    Enterprise: {
+      name: "Enterprise",
+      monthlyCostPerSeat: 150,
+      isTeamTier: true,
+      supportsCentralBilling: true,
+      supportsSSO: true,
+      notes: "Expanded context windows and governance",
+    },
+    "API Direct": {
+      name: "API Direct",
+      monthlyCostPerSeat: null,
+      isTeamTier: false,
+      isApiTier: true,
+      notes: "Pay per token — claude-sonnet-4: $3/M input, $15/M output",
+    },
+  },
 
+  ChatGPT: {
+    Plus: {
+      name: "Plus",
+      monthlyCostPerSeat: 20,
+      isTeamTier: false,
+    },
+    Team: {
+      name: "Team",
+      monthlyCostPerSeat: 30,
+      annualCostPerSeat: 25,
+      isTeamTier: true,
+      supportsCentralBilling: true,
+    },
     Enterprise: {
       name: "Enterprise",
       monthlyCostPerSeat: 60,
@@ -171,64 +134,54 @@ export const AI_TOOL_PRICING: MarketPricingData = {
       supportsSSO: true,
       notes: "Estimated enterprise contract baseline",
     },
+    "API Direct": {
+      name: "API Direct",
+      monthlyCostPerSeat: null,
+      isTeamTier: false,
+      isApiTier: true,
+      notes: "Pay per token — gpt-4o: $2.5/M input, $10/M output",
+    },
+  },
+
+  "Anthropic API": {
+    "API Direct": {
+      name: "API Direct",
+      monthlyCostPerSeat: null,
+      isTeamTier: false,
+      isApiTier: true,
+      notes: "claude-sonnet-4: $3/M input, $15/M output. claude-haiku-4: $0.8/M input, $4/M output",
+    },
+  },
+
+  "OpenAI API": {
+    "API Direct": {
+      name: "API Direct",
+      monthlyCostPerSeat: null,
+      isTeamTier: false,
+      isApiTier: true,
+      notes: "gpt-4o: $2.5/M input, $10/M output. gpt-4o-mini: $0.15/M input, $0.6/M output",
+    },
   },
 
   Gemini: {
-    Free: {
-      name: "Free",
-      monthlyCostPerSeat: 0,
-      isTeamTier: false,
-    },
-
     Pro: {
-      name: "Advanced / Pro",
+      name: "Gemini Advanced / Pro",
       monthlyCostPerSeat: 20,
       isTeamTier: false,
+      notes: "Google One AI Premium",
     },
-
-    Business: {
-      name: "Workspace Business",
-      monthlyCostPerSeat: 24,
-      isTeamTier: true,
-      supportsCentralBilling: true,
-    },
-
-    Enterprise: {
-      name: "Workspace Enterprise",
-      monthlyCostPerSeat: 36,
-      isTeamTier: true,
-      supportsCentralBilling: true,
-      supportsSSO: true,
-    },
-  },
-
-  v0: {
-    Free: {
-      name: "Free",
-      monthlyCostPerSeat: 0,
+    Ultra: {
+      name: "Gemini Ultra",
+      monthlyCostPerSeat: 249,
       isTeamTier: false,
+      notes: "Highest capability tier",
     },
-
-    Premium: {
-      name: "Premium",
-      monthlyCostPerSeat: 20,
+    API: {
+      name: "API (Pay-as-you-go)",
+      monthlyCostPerSeat: null,
       isTeamTier: false,
-    },
-
-    Team: {
-      name: "Team",
-      monthlyCostPerSeat: 30,
-      isTeamTier: true,
-      supportsCentralBilling: true,
-    },
-
-    Business: {
-      name: "Business",
-      monthlyCostPerSeat: 100,
-      isTeamTier: true,
-      supportsCentralBilling: true,
-      supportsSSO: true,
-      notes: "Dedicated isolated infrastructure",
+      isApiTier: true,
+      notes: "gemini-2.0-flash: $0.10/M input, $0.40/M output",
     },
   },
 
@@ -238,13 +191,11 @@ export const AI_TOOL_PRICING: MarketPricingData = {
       monthlyCostPerSeat: 0,
       isTeamTier: false,
     },
-
     Pro: {
       name: "Pro",
-      monthlyCostPerSeat: 20,
+      monthlyCostPerSeat: 15,
       isTeamTier: false,
     },
-
     Teams: {
       name: "Teams",
       monthlyCostPerSeat: 40,
@@ -254,47 +205,17 @@ export const AI_TOOL_PRICING: MarketPricingData = {
   },
 };
 
-export const API_TOKEN_PRICING = {
-  anthropic: {
-    "claude-sonnet-4.6": {
-      input: 3.0,
-      output: 15.0,
-    },
-
-    "claude-opus-4.6": {
-      input: 5.0,
-      output: 25.0,
-    },
-
-    "claude-haiku-4.5": {
-      input: 1.0,
-      output: 5.0,
-    },
-  },
-
-  openai: {
-    "gpt-4o": {
-      input: 2.5,
-      output: 10.0,
-    },
-
-    "o1-mini": {
-      input: 3.0,
-      output: 12.0,
-    },
-  },
-};
-
 export const PRICING_METADATA = {
-  verifiedAt: "2026-05-21",
-
+  verifiedAt: "2026-05-24",
   sources: {
     cursor: "https://cursor.sh/pricing",
-
-    githubCopilot: "https://github.com/pricing",
-
-    anthropic: "https://www.anthropic.com/claude/team",
-
+    githubCopilot: "https://github.com/features/copilot#pricing",
+    anthropic: "https://www.anthropic.com/pricing",
+    anthropicApi: "https://www.anthropic.com/api",
     openai: "https://openai.com/chatgpt/pricing",
+    openaiApi: "https://openai.com/api/pricing",
+    gemini: "https://gemini.google.com/advanced",
+    geminiApi: "https://ai.google.dev/pricing",
+    windsurf: "https://windsurf.com/pricing",
   },
 };

@@ -4,15 +4,39 @@ import { useState, useEffect } from "react";
 import { runAudit } from "@/lib/audit-engine";
 import { UserToolInput, AuditRecommendation } from "@/types/audit";
 
-const AVAILABLE_TOOLS = ["ChatGPT", "Claude", "Cursor", "GitHub Copilot", "Gemini", "Windsurf"];
+const AVAILABLE_TOOLS = [
+  "ChatGPT",
+  "Claude",
+  "Cursor",
+  "GitHub Copilot",
+  "Gemini",
+  "Windsurf",
+  "Anthropic API",
+  "OpenAI API",
+];
 
 const PLAN_MATRICES: Record<string, string[]> = {
-  ChatGPT: ["Go", "Plus", "Team", "Enterprise"],
-  Claude: ["Free", "Pro", "Max", "Team", "Enterprise"],
+  ChatGPT: ["Plus", "Team", "Enterprise", "API Direct"],
+  Claude: ["Free", "Pro", "Max", "Team", "Enterprise", "API Direct"],
   Cursor: ["Hobby", "Pro", "Business", "Enterprise"],
   "GitHub Copilot": ["Individual", "Business", "Enterprise"],
-  Gemini: ["Free", "Pro", "Business", "Enterprise"],
+  Gemini: ["Pro", "Ultra", "API"],
   Windsurf: ["Free", "Pro", "Teams"],
+  "Anthropic API": ["API Direct"],
+  "OpenAI API": ["API Direct"],
+};
+
+const USE_CASES = ["coding", "writing", "data", "research", "mixed"];
+
+const TOOL_ICONS: Record<string, string> = {
+  ChatGPT: "⬡",
+  Claude: "◈",
+  Cursor: "⌘",
+  "GitHub Copilot": "◎",
+  Gemini: "✦",
+  Windsurf: "◊",
+  "Anthropic API": "◈",
+  "OpenAI API": "⬡",
 };
 
 const INITIAL_TOOL_STATE = (tool: string): UserToolInput => ({
@@ -23,17 +47,10 @@ const INITIAL_TOOL_STATE = (tool: string): UserToolInput => ({
   annualBilling: false,
 });
 
-const TOOL_ICONS: Record<string, string> = {
-  ChatGPT: "⬡",
-  Claude: "◈",
-  Cursor: "⌘",
-  "GitHub Copilot": "◎",
-  Gemini: "✦",
-  Windsurf: "◊",
-};
-
 export default function AuditForm() {
   const [activeStack, setActiveStack] = useState<UserToolInput[]>([]);
+  const [teamSize, setTeamSize] = useState<number>(1);
+  const [useCase, setUseCase] = useState<string>("mixed");
   const [results, setResults] = useState<AuditRecommendation[]>([]);
   const [aiSummary, setAiSummary] = useState<string>("");
   const [isLoadingSummary, setIsLoadingSummary] = useState<boolean>(false);
@@ -44,12 +61,17 @@ export default function AuditForm() {
 
   useEffect(() => {
     const savedStack = localStorage.getItem("burnaudit_stack_cache");
+    const savedTeamSize = localStorage.getItem("burnaudit_team_size");
+    const savedUseCase = localStorage.getItem("burnaudit_use_case");
+
     if (savedStack) {
       try { setActiveStack(JSON.parse(savedStack)); }
       catch { setActiveStack([INITIAL_TOOL_STATE("ChatGPT")]); }
     } else {
       setActiveStack([INITIAL_TOOL_STATE("ChatGPT")]);
     }
+    if (savedTeamSize) setTeamSize(Number(savedTeamSize));
+    if (savedUseCase) setUseCase(savedUseCase);
     setIsHydrated(true);
   }, []);
 
@@ -72,14 +94,41 @@ export default function AuditForm() {
     const updated = activeStack.map((tool, idx) => {
       if (idx !== index) return tool;
       const newTool = { ...tool, [field]: value };
-      if (field === "toolName") newTool.currentPlan = PLAN_MATRICES[value as string][0];
+      if (field === "toolName") {
+        newTool.currentPlan = PLAN_MATRICES[value as string][0];
+        // API tiers don't have seats
+        if (["Anthropic API", "OpenAI API"].includes(value as string)) {
+          newTool.seats = 1;
+        }
+      }
       return newTool;
     });
     updateStackAndCache(updated);
   };
 
+  const handleTeamSize = (val: number) => {
+    setTeamSize(val);
+    localStorage.setItem("burnaudit_team_size", String(val));
+  };
+
+  const handleUseCase = (val: string) => {
+    setUseCase(val);
+    localStorage.setItem("burnaudit_use_case", val);
+  };
+
+  const copyShareLink = () => {
+    if (!shareableAuditId) return;
+    const url = `${window.location.origin}/audit/${shareableAuditId}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
   const executeStackAudit = async () => {
     setIsRunning(true);
+    setShareableAuditId(null);
+
     const engineOutputs = runAudit(activeStack);
     setResults(engineOutputs);
 
@@ -94,7 +143,13 @@ export default function AuditForm() {
       const response = await fetch("/api/summary", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ totalMonthlySavings, totalAnnualSavings, recommendations: engineOutputs }),
+        body: JSON.stringify({
+          totalMonthlySavings,
+          totalAnnualSavings,
+          recommendations: engineOutputs,
+          useCase,
+          teamSize,
+        }),
       });
       const data = await response.json();
       if (data.summary) {
@@ -118,6 +173,8 @@ export default function AuditForm() {
           aiSummary: generatedSummary,
           totalMonthlySavings,
           totalAnnualSavings,
+          teamSize,
+          useCase,
         }),
       });
       const savedAudit = await saveResponse.json();
@@ -131,16 +188,6 @@ export default function AuditForm() {
     }
   };
 
-
-  const copyShareLink = () => {
-    if (!shareableAuditId) return;
-    const url = `${window.location.origin}/audit/${shareableAuditId}`;
-    navigator.clipboard.writeText(url).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  };
-
   if (!isHydrated) return (
     <div className="flex items-center justify-center py-20">
       <div className="h-5 w-5 rounded-full border-2 border-white/20 border-t-white animate-spin" />
@@ -149,6 +196,8 @@ export default function AuditForm() {
 
   const overallMonthlySavings = results.reduce((sum, item) => sum + item.monthlySavings, 0);
   const overallAnnualSavings = results.reduce((sum, item) => sum + item.annualSavings, 0);
+  const isApiTool = (toolName: string) => ["Anthropic API", "OpenAI API"].includes(toolName) || 
+    ["API Direct", "API"].includes(activeStack.find(t => t.toolName === toolName)?.currentPlan || "");
 
   return (
     <div>
@@ -163,108 +212,156 @@ export default function AuditForm() {
         <p className="mt-1 text-sm text-white/40">Add every AI tool your team pays for. We&apos;ll find the waste.</p>
       </div>
 
+      {/* Team context row */}
+      <div className="mb-5 grid grid-cols-2 gap-4 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5">
+        <div>
+          <label className="mb-2 block text-[10px] font-bold uppercase tracking-wider text-white/30">Team Size</label>
+          <input
+            type="number"
+            min="1"
+            value={teamSize}
+            onChange={(e) => handleTeamSize(Math.max(1, Number(e.target.value)))}
+            className="w-full rounded-xl border border-white/[0.08] bg-black/60 px-3 py-2.5 text-sm font-medium text-white focus:border-white/20 focus:outline-none transition-colors"
+          />
+        </div>
+        <div>
+          <label className="mb-2 block text-[10px] font-bold uppercase tracking-wider text-white/30">Primary Use Case</label>
+          <select
+            value={useCase}
+            onChange={(e) => handleUseCase(e.target.value)}
+            className="w-full rounded-xl border border-white/[0.08] bg-black/60 px-3 py-2.5 text-sm font-medium text-white focus:border-white/20 focus:outline-none transition-colors appearance-none cursor-pointer capitalize"
+          >
+            {USE_CASES.map((uc) => (
+              <option key={uc} value={uc} className="capitalize">{uc}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
       {/* Tool rows */}
       <div className="space-y-3">
-        {activeStack.map((toolInstance, idx) => (
-          <div
-            key={idx}
-            className="group relative rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5 transition-all hover:border-white/[0.12] hover:bg-white/[0.05]"
-          >
-            {/* Tool number indicator */}
-            <div className="absolute -left-3 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full border border-white/10 bg-[#080808] flex items-center justify-center">
-              <span className="text-[10px] font-bold text-white/30">{idx + 1}</span>
-            </div>
+        {activeStack.map((toolInstance, idx) => {
+          const isApi = ["Anthropic API", "OpenAI API"].includes(toolInstance.toolName) ||
+            ["API Direct", "API"].includes(toolInstance.currentPlan);
 
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 items-end">
-              {/* Tool */}
-              <div className="col-span-2 md:col-span-1">
-                <label className="mb-2 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-white/30">
-                  <span>{TOOL_ICONS[toolInstance.toolName] || "◆"}</span>
-                  Tool
-                </label>
-                <select
-                  value={toolInstance.toolName}
-                  onChange={(e) => handleFieldChange(idx, "toolName", e.target.value)}
-                  className="w-full rounded-xl border border-white/[0.08] bg-black/60 px-3 py-2.5 text-sm font-medium text-white focus:border-white/20 focus:outline-none transition-colors appearance-none cursor-pointer"
-                >
-                  {AVAILABLE_TOOLS.map((name) => (
-                    <option key={name} value={name}>{name}</option>
-                  ))}
-                </select>
+          return (
+            <div
+              key={idx}
+              className="group relative rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5 transition-all hover:border-white/[0.12] hover:bg-white/[0.05]"
+            >
+              <div className="absolute -left-3 top-1/2 -translate-y-1/2 h-6 w-6 rounded-full border border-white/10 bg-[#080808] flex items-center justify-center">
+                <span className="text-[10px] font-bold text-white/30">{idx + 1}</span>
               </div>
 
-              {/* Plan */}
-              <div>
-                <label className="mb-2 block text-[10px] font-bold uppercase tracking-wider text-white/30">Plan</label>
-                <select
-                  value={toolInstance.currentPlan}
-                  onChange={(e) => handleFieldChange(idx, "currentPlan", e.target.value)}
-                  className="w-full rounded-xl border border-white/[0.08] bg-black/60 px-3 py-2.5 text-sm font-medium text-white focus:border-white/20 focus:outline-none transition-colors appearance-none cursor-pointer"
-                >
-                  {PLAN_MATRICES[toolInstance.toolName].map((tier) => (
-                    <option key={tier} value={tier}>{tier}</option>
-                  ))}
-                </select>
-              </div>
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 items-end">
+                {/* Tool */}
+                <div className="col-span-2 md:col-span-1">
+                  <label className="mb-2 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-white/30">
+                    <span>{TOOL_ICONS[toolInstance.toolName] || "◆"}</span>
+                    Tool
+                  </label>
+                  <select
+                    value={toolInstance.toolName}
+                    onChange={(e) => handleFieldChange(idx, "toolName", e.target.value)}
+                    className="w-full rounded-xl border border-white/[0.08] bg-black/60 px-3 py-2.5 text-sm font-medium text-white focus:border-white/20 focus:outline-none transition-colors appearance-none cursor-pointer"
+                  >
+                    {AVAILABLE_TOOLS.map((name) => (
+                      <option key={name} value={name}>{name}</option>
+                    ))}
+                  </select>
+                </div>
 
-              {/* Seats */}
-              <div>
-                <label className="mb-2 block text-[10px] font-bold uppercase tracking-wider text-white/30">Seats</label>
-                <input
-                  type="number"
-                  min="1"
-                  value={toolInstance.seats}
-                  onChange={(e) => handleFieldChange(idx, "seats", Math.max(1, Number(e.target.value)))}
-                  className="w-full rounded-xl border border-white/[0.08] bg-black/60 px-3 py-2.5 text-sm font-medium text-white focus:border-white/20 focus:outline-none transition-colors"
-                />
-              </div>
+                {/* Plan */}
+                <div>
+                  <label className="mb-2 block text-[10px] font-bold uppercase tracking-wider text-white/30">Plan</label>
+                  <select
+                    value={toolInstance.currentPlan}
+                    onChange={(e) => handleFieldChange(idx, "currentPlan", e.target.value)}
+                    className="w-full rounded-xl border border-white/[0.08] bg-black/60 px-3 py-2.5 text-sm font-medium text-white focus:border-white/20 focus:outline-none transition-colors appearance-none cursor-pointer"
+                  >
+                    {PLAN_MATRICES[toolInstance.toolName].map((tier) => (
+                      <option key={tier} value={tier}>{tier}</option>
+                    ))}
+                  </select>
+                </div>
 
-              {/* Monthly spend */}
-              <div>
-                <label className="mb-2 block text-[10px] font-bold uppercase tracking-wider text-white/30">$/Month</label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-white/30">$</span>
+                {/* Seats — hidden for API tools */}
+                <div>
+                  <label className="mb-2 block text-[10px] font-bold uppercase tracking-wider text-white/30">
+                    {isApi ? "N/A" : "Seats"}
+                  </label>
                   <input
                     type="number"
-                    min="0"
-                    value={toolInstance.monthlySpend}
-                    onChange={(e) => handleFieldChange(idx, "monthlySpend", Math.max(0, Number(e.target.value)))}
-                    className="w-full rounded-xl border border-white/[0.08] bg-black/60 pl-7 pr-3 py-2.5 text-sm font-medium text-white focus:border-white/20 focus:outline-none transition-colors"
+                    min="1"
+                    value={isApi ? "—" : toolInstance.seats}
+                    disabled={isApi}
+                    onChange={(e) => handleFieldChange(idx, "seats", Math.max(1, Number(e.target.value)))}
+                    className="w-full rounded-xl border border-white/[0.08] bg-black/60 px-3 py-2.5 text-sm font-medium text-white focus:border-white/20 focus:outline-none transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                   />
+                </div>
+
+                {/* Monthly spend */}
+                <div>
+                  <label className="mb-2 block text-[10px] font-bold uppercase tracking-wider text-white/30">
+                    {isApi ? "Monthly API Bill ($)" : "$/Month"}
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-white/30">$</span>
+                    <input
+                      type="number"
+                      min="0"
+                      value={toolInstance.monthlySpend}
+                      onChange={(e) => handleFieldChange(idx, "monthlySpend", Math.max(0, Number(e.target.value)))}
+                      className="w-full rounded-xl border border-white/[0.08] bg-black/60 pl-7 pr-3 py-2.5 text-sm font-medium text-white focus:border-white/20 focus:outline-none transition-colors"
+                    />
+                  </div>
+                </div>
+
+                {/* Annual toggle + remove */}
+                <div className="flex items-center justify-between gap-3">
+                  {!isApi ? (
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <div className="relative">
+                        <input
+                          type="checkbox"
+                          checked={toolInstance.annualBilling}
+                          onChange={(e) => handleFieldChange(idx, "annualBilling", e.target.checked)}
+                          className="sr-only"
+                        />
+                        <div className={`h-5 w-9 rounded-full border transition-colors ${toolInstance.annualBilling ? "bg-white border-white" : "bg-transparent border-white/20"}`}>
+                          <div className={`absolute top-0.5 h-4 w-4 rounded-full transition-all ${toolInstance.annualBilling ? "left-4 bg-black" : "left-0.5 bg-white/30"}`} />
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-medium text-white/40">Annual</span>
+                    </label>
+                  ) : (
+                    <div className="rounded-lg border border-blue-500/20 bg-blue-500/10 px-2 py-1">
+                      <span className="text-[10px] font-bold text-blue-400">API</span>
+                    </div>
+                  )}
+
+                  {activeStack.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveTool(idx)}
+                      className="h-8 w-8 rounded-lg border border-red-500/20 bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors flex items-center justify-center text-sm"
+                      aria-label={`Remove ${toolInstance.toolName}`}
+                    >
+                      ×
+                    </button>
+                  )}
                 </div>
               </div>
 
-              {/* Annual + Remove */}
-              <div className="flex items-center justify-between gap-3">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <div className="relative">
-                    <input
-                      type="checkbox"
-                      checked={toolInstance.annualBilling}
-                      onChange={(e) => handleFieldChange(idx, "annualBilling", e.target.checked)}
-                      className="sr-only"
-                    />
-                    <div className={`h-5 w-9 rounded-full border transition-colors ${toolInstance.annualBilling ? "bg-white border-white" : "bg-transparent border-white/20"}`}>
-                      <div className={`absolute top-0.5 h-4 w-4 rounded-full transition-all ${toolInstance.annualBilling ? "left-4 bg-black" : "left-0.5 bg-white/30"}`} />
-                    </div>
-                  </div>
-                  <span className="text-[10px] font-medium text-white/40">Annual</span>
-                </label>
-
-                {activeStack.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveTool(idx)}
-                    className="h-8 w-8 rounded-lg border border-red-500/20 bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors flex items-center justify-center text-sm"
-                    aria-label={`Remove ${toolInstance.toolName}`}
-                  >
-                    ×
-                  </button>
-                )}
-              </div>
+              {/* API tier note */}
+              {isApi && (
+                <p className="mt-3 text-[11px] text-white/25 border-t border-white/[0.05] pt-3">
+                  API billing is usage-based. Enter your actual last monthly invoice amount above.
+                </p>
+              )}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Actions */}
@@ -298,7 +395,6 @@ export default function AuditForm() {
       {results.length > 0 && (
         <div className="mt-12 space-y-6">
 
-          {/* Divider */}
           <div className="flex items-center gap-3">
             <div className="h-px flex-1 bg-white/10" />
             <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/30">Audit Results</span>
@@ -403,7 +499,7 @@ export default function AuditForm() {
           </div>
 
           {/* Share bar */}
-          {shareableAuditId && (
+          {shareableAuditId ? (
             <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-wider text-white/30 mb-1">Shareable Audit URL</p>
@@ -422,14 +518,13 @@ export default function AuditForm() {
                 {copied ? "✓ Copied!" : "Copy Link"}
               </button>
             </div>
-          )}
-
-          {!shareableAuditId && results.length > 0 && (
+          ) : (
             <div className="rounded-2xl border border-dashed border-white/[0.08] p-5 flex items-center gap-3">
               <div className="h-4 w-4 rounded-full border-2 border-white/20 border-t-white/60 animate-spin shrink-0" />
               <p className="text-xs text-white/30">Generating shareable link...</p>
             </div>
           )}
+
         </div>
       )}
     </div>
