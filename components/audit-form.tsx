@@ -129,7 +129,7 @@ export default function AuditForm() {
     setIsRunning(true);
     setShareableAuditId(null);
 
-    const engineOutputs = runAudit(activeStack);
+    const engineOutputs = runAudit(activeStack, teamSize, useCase);
     setResults(engineOutputs);
 
     const totalMonthlySavings = engineOutputs.reduce((sum, item) => sum + item.monthlySavings, 0);
