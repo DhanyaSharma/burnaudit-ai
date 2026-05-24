@@ -23,4 +23,10 @@
 **What I did:** Spent most of the day debugging why Supabase wasn't saving anything. Turned out every line in `.env.local` was commented out with `#` — so the app had no database URL and was silently sending requests to the Supabase homepage instead of my project. Fixed that, then also fixed the Supabase Row Level Security policies which were blocking inserts. Built out the `/audit/[id]` page that loads a saved audit and displays it publicly. Fixed a Next.js 16 issue where `params.id` has to be awaited before you can use it. Replaced all `console.error` calls with `console.warn` to stop Next.js dev tools from showing red error overlays for non-crash issues. Redesigned the homepage and audit form to look more professional.
 **What I learned:** Commented-out env variables fail silently in the worst possible way — the app starts fine but makes requests to completely wrong URLs. Next.js dev tools intercept `console.error` and show a red crash overlay even if the app is still running fine; `console.warn` skips that. In Next.js 16, dynamic route params are a Promise and need `await` before you can access them.
 **Blockers / what I'm stuck on:** Gemini API hit the free tier daily limit (20 requests/day for gemini-2.5-flash). Switching to gemini-2.0-flash which has a higher quota. Shareable URL feature is built but needs Supabase RLS policies applied to work end to end.
-**Plan for tomorrow:** add email capture field, add Open Graph tags to the shared audit page, test on mobile.
+**Plan for tomorrow:** add email capture field.
+
+
+## Day 4 — 2026-05-23
+**Hours worked:** 2
+**What I did:** Worked on MVP
+**Plan for tomorrow:** work on 4th and 5th Mvp and add email capture field.
