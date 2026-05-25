@@ -49,6 +49,12 @@ export default function AuditForm() {
   const [copied, setCopied] = useState(false);
   const [notifyEmail, setNotifyEmail] = useState("");
   const [notifySubmitted, setNotifySubmitted] = useState(false);
+  const [showLeadCapture, setShowLeadCapture] = useState(false);
+  const [leadEmail, setLeadEmail] = useState("");
+  const [leadCompany, setLeadCompany] = useState("");
+  const [leadRole, setLeadRole] = useState("");
+  const [leadSubmitted, setLeadSubmitted] = useState(false);
+  const [honeypot, setHoneypot] = useState("");
 
   useEffect(() => {
     const savedStack = localStorage.getItem("burnaudit_stack_cache");
@@ -133,6 +139,30 @@ export default function AuditForm() {
     setNotifySubmitted(true);
   };
 
+  const handleLeadSubmit = async () => {
+    if (!leadEmail) return;
+    try {
+      await fetch("/api/save-audit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          stack: activeStack,
+          recommendations: results,
+          aiSummary,
+          totalMonthlySavings: overallMonthlySavings,
+          totalAnnualSavings: overallAnnualSavings,
+          teamSize,
+          useCase,
+          email: leadEmail,
+          companyName: leadCompany,
+          role: leadRole,
+          website: honeypot, // honeypot
+        }),
+      });
+    } catch {}
+    setLeadSubmitted(true);
+  };
+
   const executeStackAudit = async () => {
     setIsRunning(true);
     setShareableAuditId(null);
@@ -161,6 +191,8 @@ export default function AuditForm() {
     } finally {
       setIsLoadingSummary(false);
       setIsRunning(false);
+      // Show lead capture after results are visible
+      setTimeout(() => setShowLeadCapture(true), 1500);
     }
 
     try {
@@ -501,6 +533,74 @@ export default function AuditForm() {
             </div>
           )}
 
+        </div>
+      )}
+
+      {/* ── Lead capture modal ── */}
+      {showLeadCapture && !leadSubmitted && overallMonthlySavings > 0 && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-3xl border border-white/[0.1] bg-[#0e0e0e] p-8 shadow-2xl">
+            <button onClick={() => setShowLeadCapture(false)}
+              className="absolute top-4 right-4 text-white/30 hover:text-white/60 text-xl">×</button>
+
+            <div className="mb-6">
+              <div className="inline-flex items-center gap-2 rounded-full border border-green-500/20 bg-green-500/10 px-3 py-1 mb-4">
+                <div className="h-1.5 w-1.5 rounded-full bg-green-400" />
+                <span className="text-[10px] font-bold uppercase tracking-wider text-green-400">
+                  ${overallMonthlySavings.toLocaleString()}/mo identified
+                </span>
+              </div>
+              <h3 className="text-xl font-black text-white mb-2">Get your full report</h3>
+              <p className="text-sm text-white/40">
+                We&apos;ll email you the complete audit and alert you when new optimizations apply to your stack.
+                {overallMonthlySavings >= 500 && " The Credex team will also reach out about infrastructure credits."}
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              {/* Honeypot — hidden from real users, bots fill it */}
+              <input
+                type="text"
+                value={honeypot}
+                onChange={(e) => setHoneypot(e.target.value)}
+                aria-hidden="true"
+                tabIndex={-1}
+                style={{ position: "absolute", opacity: 0, pointerEvents: "none", height: 0 }}
+                autoComplete="off"
+              />
+
+              <input type="email" placeholder="Work email *" value={leadEmail}
+                onChange={(e) => setLeadEmail(e.target.value)} required
+                className="w-full rounded-xl border border-white/[0.08] bg-black/60 px-4 py-3 text-sm text-white placeholder:text-white/25 focus:border-white/20 focus:outline-none" />
+              <input type="text" placeholder="Company name (optional)" value={leadCompany}
+                onChange={(e) => setLeadCompany(e.target.value)}
+                className="w-full rounded-xl border border-white/[0.08] bg-black/60 px-4 py-3 text-sm text-white placeholder:text-white/25 focus:border-white/20 focus:outline-none" />
+              <input type="text" placeholder="Your role (optional)" value={leadRole}
+                onChange={(e) => setLeadRole(e.target.value)}
+                className="w-full rounded-xl border border-white/[0.08] bg-black/60 px-4 py-3 text-sm text-white placeholder:text-white/25 focus:border-white/20 focus:outline-none" />
+
+              <button onClick={handleLeadSubmit} disabled={!leadEmail}
+                className="w-full rounded-xl bg-white text-black py-3 text-sm font-bold hover:bg-white/90 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+                Send My Report →
+              </button>
+
+              <button onClick={() => setShowLeadCapture(false)}
+                className="w-full text-xs text-white/25 hover:text-white/50 transition-colors py-1">
+                Skip — just show the results
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {leadSubmitted && (
+        <div className="fixed bottom-6 right-6 z-50 rounded-2xl border border-green-500/30 bg-green-500/10 px-5 py-4 flex items-center gap-3 shadow-xl">
+          <span className="text-green-400 text-lg">✓</span>
+          <div>
+            <p className="text-sm font-bold text-white">Report sent to {leadEmail}</p>
+            <p className="text-xs text-white/40">Check your inbox in a few minutes.</p>
+          </div>
+          <button onClick={() => setLeadSubmitted(false)} className="ml-2 text-white/30 hover:text-white/60">×</button>
         </div>
       )}
     </div>
