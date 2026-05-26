@@ -2,7 +2,7 @@
 
 ## System Diagram
 
-
+<img src="./screenshots/SystemDesign.png" width="800"/>
 ---
 
 ## Data Flow
