@@ -25,9 +25,11 @@
 **Blockers / what I'm stuck on:** Gemini API hit the free tier daily limit (20 requests/day for gemini-2.5-flash). Thinking Switching to gemini-2.0-flash which has a higher quota. 
 **Plan for tomorrow:** add email capture field.
 
-
 ## Day 4 — 2026-05-23
-**Hours worked:** 2
+**Hours worked:** 3
 **What I did:** Worked on MVP
 **Plan for tomorrow:** work on 4th and 5th Mvp and add email capture field.
 
+## Day 5 — 2026-05-24
+**Hours worked:** 2
+**What I did:** Worked on MVP and bonus; Completed with the project and deployed it on vercel
