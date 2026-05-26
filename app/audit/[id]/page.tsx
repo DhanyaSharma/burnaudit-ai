@@ -2,11 +2,9 @@ import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import PdfExportButton from "@/components/PdfExportButton";
+import CopyLinkButton from "@/components/CopyLinkButton";
 
-// ---------------------------------------------------------------------------
-// Open Graph + Twitter Card metadata — required for clean link previews
-// Identifying details (email, company) stripped — only tools + savings shown
-// ---------------------------------------------------------------------------
 export async function generateMetadata(
   { params }: { params: Promise<{ id: string }> }
 ): Promise<Metadata> {
@@ -18,11 +16,7 @@ export async function generateMetadata(
     .eq("id", id)
     .single();
 
-  if (!audit) {
-    return {
-      title: "Audit Not Found — BurnAudit AI",
-    };
-  }
+  if (!audit) return { title: "Audit Not Found — BurnAudit AI" };
 
   const title = `$${audit.total_monthly_savings?.toLocaleString() ?? 0}/mo in AI savings identified`;
   const description = `This ${audit.team_size}-person ${audit.use_case ?? "team"}'s AI stack audit found $${audit.total_monthly_savings?.toLocaleString() ?? 0}/month ($${audit.total_annual_savings?.toLocaleString() ?? 0}/yr) in recoverable spend. Run your free audit at BurnAudit AI.`;
@@ -32,24 +26,17 @@ export async function generateMetadata(
     title: `${title} — BurnAudit AI`,
     description,
     openGraph: {
-      title,
-      description,
+      title, description,
       url: `${siteUrl}/audit/${id}`,
       siteName: "BurnAudit AI",
       type: "website",
-      images: [
-        {
-          url: `${siteUrl}/api/og?monthly=${audit.total_monthly_savings}&annual=${audit.total_annual_savings}`,
-          width: 1200,
-          height: 630,
-          alt: title,
-        },
-      ],
+      images: [{
+        url: `${siteUrl}/api/og?monthly=${audit.total_monthly_savings}&annual=${audit.total_annual_savings}`,
+        width: 1200, height: 630, alt: title,
+      }],
     },
     twitter: {
-      card: "summary_large_image",
-      title,
-      description,
+      card: "summary_large_image", title, description,
       images: [`${siteUrl}/api/og?monthly=${audit.total_monthly_savings}&annual=${audit.total_annual_savings}`],
     },
   };
@@ -62,8 +49,6 @@ export default async function AuditReportPage({
 }) {
   const { id } = await params;
 
-  // Fetch audit — intentionally exclude email, company_name, role from select
-  // These identifying fields are never exposed on the public URL
   const { data: audit, error } = await supabase
     .from("audits")
     .select("id, stack, recommendations, ai_summary, total_monthly_savings, total_annual_savings, team_size, use_case, created_at")
@@ -90,10 +75,22 @@ export default async function AuditReportPage({
               BURNAUDIT<span className="text-white/30">.AI</span>
             </span>
           </Link>
-          <Link href="/"
-            className="rounded-lg bg-white px-4 py-2 text-xs font-bold text-black hover:bg-white/90 transition-all">
-            Run My Audit →
-          </Link>
+          <div className="flex items-center gap-3">
+            {/* PDF export — client component */}
+            <PdfExportButton
+              auditId={id}
+              totalMonthlySavings={audit.total_monthly_savings ?? 0}
+              totalAnnualSavings={audit.total_annual_savings ?? 0}
+              recommendations={recommendations}
+              aiSummary={audit.ai_summary ?? ""}
+              teamSize={audit.team_size}
+              useCase={audit.use_case}
+            />
+            <Link href="/"
+              className="rounded-lg bg-white px-4 py-2 text-xs font-bold text-black hover:bg-white/90 transition-all">
+              Run My Audit →
+            </Link>
+          </div>
         </div>
       </nav>
 
@@ -195,7 +192,9 @@ export default async function AuditReportPage({
                       <p className="text-[10px] font-bold uppercase tracking-wider text-white/25">Action</p>
                       <p className="text-xs font-semibold text-white/70 text-right">{result.recommendedPlan}</p>
                       <div className="mt-2 rounded-xl bg-green-500/10 border border-green-500/20 px-3 py-1.5 text-center">
-                        <p className="text-lg font-black text-green-400 leading-tight">${result.monthlySavings}<span className="text-xs font-medium">/mo</span></p>
+                        <p className="text-lg font-black text-green-400 leading-tight">
+                          ${result.monthlySavings}<span className="text-xs font-medium">/mo</span>
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -210,12 +209,8 @@ export default async function AuditReportPage({
           <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5">
             <p className="text-[10px] font-bold uppercase tracking-wider text-white/30 mb-2">Share this report</p>
             <p className="text-xs font-mono text-white/40 break-all mb-3">{shareUrl}</p>
-            <button
-              onClick={() => navigator.clipboard.writeText(shareUrl)}
-              className="w-full rounded-xl border border-white/10 bg-white/[0.04] py-2 text-xs font-bold text-white/60 hover:bg-white/[0.08] hover:text-white transition-all"
-            >
-              Copy Link
-            </button>
+            {/* CopyLinkButton is a client component — handles onClick */}
+            <CopyLinkButton url={shareUrl} />
           </div>
 
           <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5 flex flex-col justify-between">
