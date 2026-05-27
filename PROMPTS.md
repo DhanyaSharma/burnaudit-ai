@@ -1,72 +1,56 @@
-# PROMPTS.md — BurnAudit AI
+# PRICING_DATA.md
 
-## Summary Generation Prompt
-
-**Location:** `app/api/summary/route.ts`
-**Model:** `claude-haiku-4-5` (Anthropic API)
-**Fallback:** Templated string in `generateFallbackSummary()`
+All pricing verified during submission week (2026-05-21 to 2026-05-24). Every number traces to an official vendor pricing page.
 
 ---
 
-### The Prompt
+## Cursor
+- Hobby: $0/month — https://cursor.sh/pricing — verified 2026-05-21
+- Pro: $20/user/month (monthly), $16/user/month (annual) — https://cursor.sh/pricing — verified 2026-05-21
+- Business: $40/user/month — https://cursor.sh/pricing — verified 2026-05-21
+- Enterprise: ~$100/user/month (estimated, contact sales) — https://cursor.sh/pricing — verified 2026-05-21
 
-```
-You are a no-nonsense CFO advisor writing a personalized audit summary for a {teamSize}-person team whose primary AI use case is {useCase}.
+## GitHub Copilot
+- Individual: $10/user/month — https://github.com/features/copilot#pricing — verified 2026-05-21
+- Business: $19/user/month — https://github.com/features/copilot#pricing — verified 2026-05-21
+- Enterprise: $39/user/month — https://github.com/features/copilot#pricing — verified 2026-05-21
 
-Audit results:
-- Total monthly savings identified: ${totalMonthlySavings}
-- Projected annual savings: ${totalAnnualSavings}
-- High-priority issues: {highSeverityTools}
-- Line items:
-{lineItems}
+## Claude (Anthropic)
+- Free: $0/month — https://www.anthropic.com/claude — verified 2026-05-21
+- Pro: $20/user/month — https://www.anthropic.com/claude — verified 2026-05-21
+- Max: $100/user/month — https://www.anthropic.com/claude — verified 2026-05-21
+- Team: $30/user/month (monthly), $25/user/month (annual) — https://www.anthropic.com/claude/team — verified 2026-05-21
+- Enterprise: ~$150/user/month (estimated, contact sales) — https://www.anthropic.com/claude/enterprise — verified 2026-05-21
+- API Direct: $3.00/M input tokens, $15.00/M output tokens (claude-sonnet-4) — https://www.anthropic.com/pricing — verified 2026-05-21
 
-Write a single paragraph, exactly 90-110 words, addressed directly to this team. Rules:
-1. Open with the most impactful specific finding (name the tool and dollar amount).
-2. Reference their use case ({useCase}) and team size ({teamSize} people) naturally — not as a label, but as context for why the recommendation makes sense.
-3. Name the one action they should take this week.
-4. If savings are $0, be honest — tell them their stack is well-configured and what to watch for.
-5. No greeting. No sign-off. No markdown. Plain prose only.
-6. Do not manufacture savings or exaggerate. Every claim must match the audit data above.
-```
+## ChatGPT (OpenAI)
+- Plus: $20/user/month — https://openai.com/chatgpt/pricing — verified 2026-05-21
+- Team: $30/user/month (monthly), $25/user/month (annual) — https://openai.com/chatgpt/pricing — verified 2026-05-21
+- Enterprise: ~$60/user/month (estimated, contact sales) — https://openai.com/chatgpt/pricing — verified 2026-05-21
+- API Direct: $2.50/M input tokens, $10.00/M output tokens (gpt-4o) — https://openai.com/api/pricing — verified 2026-05-21
 
----
+## Anthropic API (direct)
+- claude-sonnet-4: $3.00/M input, $15.00/M output — https://www.anthropic.com/pricing — verified 2026-05-21
+- claude-haiku-4-5: $0.80/M input, $4.00/M output — https://www.anthropic.com/pricing — verified 2026-05-21
+- claude-opus-4: $15.00/M input, $75.00/M output — https://www.anthropic.com/pricing — verified 2026-05-21
 
-## Why this prompt was written this way
+## OpenAI API (direct)
+- gpt-4o: $2.50/M input, $10.00/M output — https://openai.com/api/pricing — verified 2026-05-21
+- gpt-4o-mini: $0.15/M input, $0.60/M output — https://openai.com/api/pricing — verified 2026-05-21
+- o1: $15.00/M input, $60.00/M output — https://openai.com/api/pricing — verified 2026-05-21
 
-**Personalization via teamSize + useCase:** Early versions of the prompt sent only the savings numbers and line items. The output was generic — "your team is overspending" with no context. Adding team size and use case forces the model to write reasoning that actually fits the user, e.g. "for a 3-person coding team, Cursor Pro replaces Copilot entirely" rather than a generic cost-cutting statement.
+## Gemini (Google)
+- Pro (Gemini Advanced): $19.99/month via Google One AI Premium — https://one.google.com/about/ai-premium — verified 2026-05-22
+- Ultra: $249.99/month — https://gemini.google.com/advanced — verified 2026-05-22
+- API (gemini-2.0-flash): $0.10/M input tokens, $0.40/M output tokens — https://ai.google.dev/pricing — verified 2026-05-22
 
-**Word count constraint (90-110 words):** The first version had no word count instruction. Outputs ranged from 40 to 300 words — too short to be useful, or too long to read at a glance. 90-110 words is enough for one clear finding, one supporting reason, and one action. It fits on screen without scrolling.
-
-**"Do not manufacture savings":** Without this rule, the model occasionally invented savings opportunities not present in the audit data, which undermines the tool's credibility. This constraint keeps the summary grounded in the actual engine output.
-
-**No greeting/sign-off/markdown:** Tested without this rule — outputs often started with "Dear Founder," or ended with "Best regards," and included bullet points. The summary renders in a styled card; raw markdown appears as literal asterisks.
-
-**Opening with the most impactful finding:** Original prompt asked for a "summary of findings." Outputs were evenly distributed across all tools regardless of savings magnitude. Asking to open with the highest-impact item produces a lead that immediately justifies the user's time.
-
----
-
-## What was tried that didn't work
-
-**GPT-4o (OpenAI):** Tested early on. Outputs were wordier and more prone to hedging ("you may want to consider..."). Claude Haiku produces more direct, CFO-style prose which fits the product's tone better.
-
-**Gemini 2.5 Flash:** Used initially due to having an existing API key. Hit the free tier limit (20 req/day) during development. Also produced outputs that started with "Founder," as a greeting despite instructions not to, and occasionally trailed off mid-sentence when `maxOutputTokens` was set too low.
-
-**System prompt instead of user prompt:** Tried putting all instructions in a system message. Output quality was identical but added unnecessary complexity to the API call structure. Consolidated into a single user message.
-
-**Asking for bullet points:** Early version asked for "3 bullet points." Easier to parse but looked wrong in the styled summary card and felt less authoritative than a single paragraph from a CFO voice.
-
-**Temperature 0.7:** Outputs were more varied but occasionally went off-topic or added unsolicited commentary about AI trends. Dropped to 0.5 for more consistent, on-task outputs.
+## Windsurf (Codeium)
+- Free: $0/month — https://windsurf.com/pricing — verified 2026-05-22
+- Pro: $15/user/month — https://windsurf.com/pricing — verified 2026-05-22
+- Teams: $40/user/month — https://windsurf.com/pricing — verified 2026-05-22
 
 ---
 
-## Fallback behavior
+## Notes on Estimates
 
-If the Anthropic API is unavailable (missing key, rate limit, network error), the route returns a templated summary generated by `generateFallbackSummary()`. The fallback:
-- Uses the same `teamSize` and `useCase` variables for personalization
-- Has two variants: $0 savings (honest, positive) and savings > $0 (action-oriented)
-- Never shows "No summary available" to the user — the fallback is always a complete, readable sentence
-
-The fallback is triggered by:
-1. Missing `ANTHROPIC_API_KEY` environment variable
-2. Any thrown error from the Anthropic SDK (rate limits, network errors, invalid responses)
-3. Response text shorter than 50 characters (incomplete generation)
+Enterprise pricing for Cursor, Claude, and ChatGPT is not publicly listed — these vendors require contacting sales. The figures used ($100, $150, $60 respectively) are conservative estimates based on public reports, G2 reviews, and comparable enterprise SaaS pricing in the market. These are labeled as estimates in the audit engine comments and flagged accordingly in recommendations.
